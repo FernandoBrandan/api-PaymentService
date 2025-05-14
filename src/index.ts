@@ -1,73 +1,19 @@
-// https://blogs.mulesoft.com/dev-guides/api-design/event-payment-apis/
-import amqp from 'amqplib'
-import { createPayment } from './transaction/controller'
-// const RABBITMQ_URL = process.env.RABBITMQ_URL as string || 'amqp://admin:admin@rabbitmq:5672'
-const RABBITMQ_URL = 'amqp://admin:admin@172.20.0.1:5672'
-const QUEUE = 'PAYMENT'
+import express, { Request, Response } from 'express'
+import { createPayment } from './mercadopago'
 
-const check = async () => {
+const app = express()
+app.use(express.json())
+app.post('/payment', async (req: Request, res: Response) => {
   try {
-    return await amqp.connect('amqp://admin:admin@172.20.0.1:5672')
-  } catch (error) { console.error('Error de conexión a RabbitMQ:', error) }
-}
-
-const consume = async (con: any) => {
-  const channel = await con.createChannel()
-  await channel.assertQueue(QUEUE, { durable: true })
-  console.log(`Connected to RabbitMQ! Waiting for messages in ${QUEUE}.`)
-  channel.consume(QUEUE, async (msg: any) => {
-    if (msg) {
-      const message = JSON.parse(msg.content.toString())
-      await process(message)
-      channel.ack(msg)
-    }
-  }, { noAck: false })
-
-  fail(channel)
-}
-
-const process = async (message: any) => {
-  try {
-    const paid = await createPayment(message.order)
-    console.log('Procesado correctamente, SIN errores: ', paid.init_point)
-    return paid.init_point
+    const paid = await createPayment(req.body)
+    res.status(200).json(paid)
   } catch (error) {
-    console.log(`Procesado correctamente, CON errores: ${error}`)
+    console.error(error)
+    res.status(500).json({ error: 'Error al procesar el pago' })
   }
-}
+})
 
-const fail = async (channel: any) => {
-  channel.on('error', (err) => {
-    console.error('Error en el canal:', err)
-  })
-
-  channel.on('close', () => {
-    console.log('Canal cerrado, intentando reconectar...')
-    setTimeout(async () => {
-      const newConnection = await check()
-      await consume(newConnection)
-    }, 5000)
-  })
-}
-
-(async () => {
-  const connection = await check()
-  await consume(connection)
-})()
-
-// Event-Driven: Un servicio de pagos emite un evento "Pago realizado"
-// y múltiples servicios reaccionan (facturación, envío de email, actualización de stock).
-
-/**
- * Routes
- *
- * router.post('/create', createPayment)
- * router.post('/webhook', webhook)
- *
- * router.get('/success', success)
- * router.get('/failure', failure)
- * router.get('/pending', pending)
- * router.get('/', listarPagos)
- * router.get('/:id', obtenerPago)
- *
- */
+const PORT = process.env.PORT || 13001
+app.listen(PORT, () => {
+  console.log(`Server listening to http://localhost:${PORT}`)
+})

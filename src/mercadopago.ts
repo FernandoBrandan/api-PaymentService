@@ -11,81 +11,68 @@ const client = new MercadoPagoConfig({
 })
 
 export const createPayment = async (args: any) => {
-  console.log('💰 Creando pago...', args)
-  const { userid, email, phoneNumber, amount } = args
-  // Validar datos de entrada de usuario
+  console.log('💰 Creando pago...')
+  const { userID, orderID, amount, description, cart, config_transaction } = args
   try {
+    const itemsToSale = cart.map((detail: { codigo: any; name: any; price: string; quantity: any }) => ({
+      id: detail.codigo,
+      title: detail.name || 'Sin descripción',
+      unit_price: parseFloat(detail.price),
+      quantity: detail.quantity,
+      currency_id: 'ARS',
+    }))
+    // Buscar usuario
     const payer: PayerRequest = {
-      email,
-      first_name: 'Fer',
-      last_name: 'Fer',
+      first_name: "user.name",
+      last_name: "user.surname",
+      email: "user.email",
+      identification: {
+        type: 'DNI',
+        number: "user.identification",
+      },
       phone: {
         area_code: '1',
         number: '1234567'
       },
       address: { street_name: ' ', street_number: ' ', zip_code: ' ', city: ' ' },
-      identification: {
-        type: 'DNI',
-        number: '12345678'
-      }
     }
-    const itemsToSale = [
-      {
-        id: '001',
-        title: 'Producto #1',
-        description: 'Descripción del producto #1 a pagar',
-        picture_url: 'https://www.mercadopago.com/org-img/MP3/home/logomp3.gif',
-        category_id: '1',
-        quantity: 1,
-        unit_price: amount // 2.29 USD
-      }
-    ]
-
-    // const payment = new Payment(client)
-    const preference = new Preference(client)
-
-    console.log(preference)
-
-    // https://www.mercadopago.com.ar/developers/es/docs/checkout-pro/checkout-customization/preferences
-
+    const preference = new Preference(client)    // const payment = new Payment(client)
     const result = await preference.create({
       body: {
         items: itemsToSale,
         payer,
-        //        redirect_urls: {
-        //          success: '',
-        //          failure: '',
-        //          pending: ''
-        //        },
-        //        back_urls: {
-        //          success: '',
-        //          failure: '',
-        //          pending: ''
-        //        },
-        notification_url: '',
-        auto_return: ''// 'approved'
+        back_urls: {
+          success: config_transaction.back_urls.success,
+          failure: config_transaction.back_urls.failure,
+          pending: config_transaction.back_urls.pending,
+        },
+        notification_url: config_transaction.notification_url,
+        auto_return: '',
+        external_reference: orderID.toString(),
+        statement_descriptor: 'TuEmpresa',
       },
       requestOptions: {
         timeout: 5000
       }
     })
+ 
+  console.log("result.init_point",result.init_point)
+    const paymentUrl = result.sandbox_init_point || result.init_point
 
-    return result
+    return paymentUrl
   } catch (error) {
-    console.log(error)
+    console.log("Error createPayment: ", error)
   }
 }
-
 export const webhook = async (req: any, res: any) => {
-  // Webhook para recibir notificaciones de MercadoPago
-  // Este endpoint procesa los cambios de estado de los pagos.
+  // MercadoPago - preference.create - body: { notification_url: "" }
 
-  // Ejemplos de cómo te beneficia un webhook:
-  // ✅ Actualizar automáticamente el estado del pedido en tu base de datos cuando se aprueba el pago.
-  // ✅ Enviar un correo de confirmación al usuario al recibir la notificación de pago exitoso.
-  // ✅ Habilitar una descarga o acceso premium en cuanto el pago se apruebe.
-  // ✅ Manejar pagos rechazados (enviar notificación, reintentar el pago, etc.).
-  // ✅ Registrar reembolsos o cancelaciones automáticamente.
+  // Pasos
+  // Actualizar el estado del pedido en db cuando se aprueba el pago.
+  // Enviar un correo de confirmación al usuario al recibir la notificación de pago exitoso.
+  // - Habilitar una descarga o acceso premium en cuanto el pago se apruebe.
+  // - Manejar pagos rechazados (enviar notificación, reintentar el pago, etc.).
+  // - Registrar reembolsos o cancelaciones automáticamente.
 
   try {
     const { id, type } = req.query
