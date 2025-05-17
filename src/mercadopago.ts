@@ -11,7 +11,7 @@ const client = new MercadoPagoConfig({
 })
 
 export const createPayment = async (args: any) => {
-  console.log('💰 Creando pago...')
+  console.log(' Creando pago...')
   const { userID, orderID, amount, description, cart, config_transaction } = args
   try {
     const itemsToSale = cart.map((detail: { codigo: any; name: any; price: string; quantity: any }) => ({
@@ -90,7 +90,7 @@ export const webhook = async (req: any, res: any) => {
 
     if (topic === 'payment') {
       //   const payment = await mercadopago.payment.findById(paymentId)
-      //   console.log('💰 Estado del pago:', payment.body.status)
+      //   console.log('  Estado del pago:', payment.body.status)
       //
       //   // Guardar pago en MongoDB
       //   await Payment.create({
