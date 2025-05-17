@@ -3,7 +3,7 @@ import { MercadoPagoConfig, Preference } from 'mercadopago'
 import { PayerRequest } from 'mercadopago/dist/clients/payment/create/types'
 
 const client = new MercadoPagoConfig({
-  accessToken: 'TEST-932074593473716-103114-a21810c7fdc6f4a0b243b42e0054ef35-173869747',
+  accessToken: ' ',
   options: {
     timeout: 5000,
     idempotencyKey: 'abc'
